@@ -1,0 +1,9 @@
+flask
+flask-cors
+werkzeug
+mysql-connector-python
+pytesseract
+Pillow
+opencv-python-headless
+requests
+gunicorn
