@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrackLife — Plataforma de Pessoas Desaparecidas em Angola</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ── FUNDO LOGIN COM IMAGEM ── */
+#auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+#auth-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url('/imagens/bg-tracklife.png');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.18) blur(2px);
+  z-index: 0;
+}
+#auth-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(3,8,15,0.75) 0%, rgba(26,111,186,0.2) 100%);
+  z-index: 1;
+}
+.auth-box { position: relative; z-index: 2; }
+
+/* ── CARDS DE PREVIEW NO FUNDO DO LOGIN ── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(20px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.preview-card img {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(239,68,68,0.7);
+}
+.preview-card-name { font-family:'Syne',sans-serif; font-size:12px; font-weight:700; color:#e8f0f8; }
+.preview-card-meta { font-size:10px; color:#6a85a0; margin-top:2px; }
+.preview-card-badge {
+  font-size:9px; background:rgba(239,68,68,0.2); color:#ef4444;
+  border:1px solid rgba(239,68,68,0.35); padding:2px 7px;
+  border-radius:20px; font-weight:700; white-space:nowrap;
+}
+
+/* ── BOTAO ANONIMO ── */
+.btn-anonimo {
+  width:100%; padding:11px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.05); color:var(--muted);
+  font-family:var(--font-head); font-size:13px; font-weight:600;
+  cursor:pointer; margin-top:8px; transition:all 0.2s;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.btn-anonimo:hover { background:rgba(255,255,255,0.1); color:var(--text); }
+
+/* ── GERAR ROSTO MODAL ── */
+.gerar-rosto-box {
+  background: linear-gradient(135deg, rgba(93,63,211,0.1), rgba(26,111,186,0.1));
+  border: 1px solid rgba(93,63,211,0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.gerar-rosto-preview {
+  width: 120px; height: 120px;
+  border-radius: 12px;
+  object-fit: cover;
+  margin: 0 auto 10px;
+  display: block;
+  border: 2px solid rgba(93,63,211,0.5);
+}
+
+/* ── MELHORIAS DASHBOARD ── */
+.stat-card { cursor: default; }
+.stat-card:hover { transform: translateY(-2px); }
+
+/* ── DASH MINI ROW COM FOTO REAL ── */
+.dash-mini-photo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* ── MISSING LIST COM FOTO REAL ── */
+.missing-photo img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+</style>
+</head>
+<body>
+
+  <div id="splash-screen" style="
+  position:fixed;inset:0;z-index:9999;
+  background-image:url('/imagens/bg-tracklife.png');
+  background-size:cover;background-position:center;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity 1s ease;">
+  <div style="text-align:center;color:white">
+    <div style="font-family:'Syne',sans-serif;font-size:48px;font-weight:800;
+      background:linear-gradient(135deg,#fff,#7aaeff);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent">
+      
+    </div>
+    <div style="font-size:14px;opacity:0.7;margin-top:8px">
+      Sistema de Busca Inteligente — Angola
+    </div>
+  </div>
+</div>
+<!-- ── AUTH SCREEN ── -->
+<div id="auth-screen">
+  <div id="auth-bg"></div>
+
+  <!-- Preview cards no fundo -->
+  <div class="preview-section">
+    <div class="preview-card" style="animation-delay:0.1s">
+      <img src="/imagens/pessoa1.png" alt="Tomás Kiala">
+      <div>
+        <div class="preview-card-name">Tomás Kiala</div>
+        <div class="preview-card-meta">📍 Luanda, Cazenga · 9 anos</div>
+      </div>
+      <span class="preview-card-badge">🚨 Activo</span>
+    </div>
+    <div class="preview-card" style="animation-delay:0.2s">
+      <img src="/imagens/pessoa2.png" alt="Ana Perpetua">
+      <div>
+        <div class="preview-card-name">Ana Perpetua</div>
+        <div class="preview-card-meta">📍 Benguela · 34 anos</div>
+      </div>
+      <span class="preview-card-badge">🚨 Activo</span>
+    </div>
+    <div class="preview-card" style="animation-delay:0.3s">
+      <img src="/imagens/pessoa3.png" alt="Manuel Sebastião">
+      <div>
+        <div class="preview-card-name">Manuel Sebastião</div>
+        <div class="preview-card-meta">📍 Huambo · 68 anos</div>
+      </div>
+      <span class="preview-card-badge">🚨 Activo</span>
+    </div>
+    <div class="preview-card" style="animation-delay:0.4s">
+      <img src="/imagens/pessoa4.png" alt="Paulo Luvualo">
+      <div>
+        <div class="preview-card-name">Paulo Luvualo</div>
+        <div class="preview-card-meta">📍 Luanda, Viana · 22 anos</div>
+      </div>
+      <span class="preview-card-badge">🚨 Activo</span>
+    </div>
+  </div>
+
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="logo-icon">📍</div>
+      <h1>TrackLife</h1>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">Plataforma colaborativa de localização de pessoas desaparecidas em Angola.</p>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Entrar</button>
+      <button class="auth-tab" onclick="switchTab('register')">Registar</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="exemplo@email.com">
+      </div>
+      <div class="form-group">
+        <label>Palavra-passe</label>
+        <input type="password" id="login-pass" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Entrar na plataforma</button>
+      <button class="btn-anonimo" onclick="entrarAnonimo()">👤 Entrar como Anónimo</button>
+      <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:14px">Demo: demo@tracklife.ao / demo123</p>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label>Nome completo</label>
+        <input type="text" id="reg-name" placeholder="Ex: João Silva">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="joao@email.com">
+      </div>
+      <div class="form-group">
+        <label>Tipo de conta</label>
+        <select id="reg-type" onchange="toggleAuthCode(this.value)">
+          <option value="citizen">Cidadão</option>
+          <option value="police">Esquadra / Autoridade Policial</option>
+          <option value="hospital">Hospital / Saúde</option>
+          <option value="ngo">ONG / Voluntário</option>
+        </select>
+      </div>
+      <div class="form-group" id="auth-code-group" style="display:none">
+        <label>Código de Acesso Institucional 🔐</label>
+        <input type="password" id="reg-auth-code" placeholder="Código fornecido pela instituição">
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">⚠️ Necessário para aceder à área restrita.</div>
+      </div>
+      <div class="bi-upload-section">
+        <div class="bi-upload-title">🪪 Verificação de Identidade — BI</div>
+        <div class="bi-upload-grid">
+          <div class="bi-upload-box" id="bi-front-box" onclick="document.getElementById('bi-front-input').click()">
+            <div class="bi-icon">🪪</div><div class="bi-check">✅</div><div class="bi-label">BI — Frente</div>
+          </div>
+          <div class="bi-upload-box" id="bi-back-box" onclick="document.getElementById('bi-back-input').click()">
+            <div class="bi-icon">🪪</div><div class="bi-check">✅</div><div class="bi-label">BI — Verso</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">📌 O BI é necessário para verificar a identidade e garantir a segurança da plataforma.</div>
+        <input type="file" id="bi-front-input" accept="image/*" style="display:none" onchange="handleBIUpload('front',this)">
+        <input type="file" id="bi-back-input" accept="image/*" style="display:none" onchange="handleBIUpload('back',this)">
+      </div>
+      <div class="form-group">
+        <label>Palavra-passe</label>
+        <input type="password" id="reg-pass" placeholder="Mínimo 8 caracteres">
+      </div>
+      <div class="form-group">
+  <label>Província</label>
+  <select id="reg-provincia">
+    <option value="">Selecciona a província</option>
+    <option>Luanda</option>
+    <option>Benguela</option>
+    <option>Huambo</option>
+    <option>Bié</option>
+    <option>Malanje</option>
+    <option>Uíge</option>
+    <option>Cabinda</option>
+    <option>Zaire</option>
+    <option>Cunene</option>
+    <option>Cuando Cubango</option>
+    <option>Moxico</option>
+    <option>Lunda Norte</option>
+    <option>Lunda Sul</option>
+    <option>Kwanza Norte</option>
+    <option>Kwanza Sul</option>
+    <option>Namibe</option>
+    <option>Huíla</option>
+  </select>
+</div>
+<div class="form-group">
+  <label>Município</label>
+  <input type="text" id="reg-municipio" placeholder="Ex: Cazenga">
+</div>
+<div class="form-group">
+  <label>Morada</label>
+  <input type="text" id="reg-morada" placeholder="Ex: Rua da Missão, nº 45">
+</div>
+<button class="btn btn-primary" onclick="doRegister()">Criar conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📍</div>
+      <h2>TrackLife</h2>
+    </div>
+    <div class="nav-section">Principal</div>
+    <a class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span> Dashboard</a>
+    <a class="nav-item" onclick="showPage('missing',this)"><span class="nav-icon">👤</span> Pessoas Desaparecidas</a>
+    <a class="nav-item" onclick="showPage('alerts',this)"><span class="nav-icon">🔔</span> Alertas <span class="badge badge-red" style="margin-left:auto" id="alert-badge">0</span></a>
+    <a class="nav-item" onclick="showPage('esquadra',this)"><span class="nav-icon">🏛️</span> Esquadra Virtual</a>
+    <a class="nav-item" onclick="showPage('matches',this)"><span class="nav-icon">✅</span> Correspondências</a>
+    <div class="nav-section authority-only" id="nav-private-section" style="display:none">Área Restrita 🔒</div>
+    <a class="nav-item authority-only" onclick="showPage('private',this)" style="display:none" id="nav-private"><span class="nav-icon">🔒</span> Casos Confidenciais</a>
+    <a class="nav-item authority-only" onclick="showPage('authority',this)" style="display:none" id="nav-authority-dash"><span class="nav-icon">🛡️</span> Painel de Autoridade</a>
+    <div class="sidebar-bottom">
+      <div class="user-pill">
+        <div class="avatar" id="sidebar-avatar">D</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-name">Demo User</div>
+          <div class="user-role" id="sidebar-role">Cidadão</div>
+        </div>
+        <span onclick="doLogout()" title="Sair" style="cursor:pointer;color:var(--muted);font-size:18px">⏏</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <h2 id="page-title">Dashboard</h2>
+      </div>
+      <div class="topbar-right">
+        <span class="badge badge-green" id="server-badge">● Servidor Online</span>
+        <button class="btn btn-primary btn-sm" id="btn-publicar" onclick="openModal('publish-modal')">+ Publicar</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <!-- Desaparecidos Activos — puxa do banco -->
+          <div class="stat-card orange" onclick="showPage('missing', document.querySelector('[onclick*=missing]'))" style="cursor:pointer" title="Ver pessoas desaparecidas">
+            <div class="stat-top"><div class="stat-icon-box">👥</div><span class="stat-trend trend-up" id="trend-active">↑</span></div>
+            <div class="stat-label">Desaparecidos Activos</div>
+            <div class="stat-value" id="stat-active">—</div>
+            <div class="stat-sub">Clica para ver todos</div>
+            <div class="stat-progress"><div class="stat-progress-fill" id="prog-active" style="width:0%"></div></div>
+          </div>
+          <!-- Encontrados -->
+          <div class="stat-card green" onclick="showPage('matches', document.querySelector('[onclick*=matches]'))" style="cursor:pointer" title="Ver correspondências">
+            <div class="stat-top"><div class="stat-icon-box">✅</div><span class="stat-trend trend-up">↑</span></div>
+            <div class="stat-label">Encontrados</div>
+            <div class="stat-value" id="stat-found">—</div>
+            <div class="stat-sub">Clica para ver correspondências</div>
+            <div class="stat-progress"><div class="stat-progress-fill" id="prog-found" style="width:0%"></div></div>
+          </div>
+          <!-- Informações Recebidas -->
+          <div class="stat-card blue" onclick="showPage('alerts', document.querySelector('[onclick*=alerts]'))" style="cursor:pointer" title="Ver alertas e informações">
+            <div class="stat-top"><div class="stat-icon-box">📋</div><span class="stat-trend trend-neutral">→</span></div>
+            <div class="stat-label">Informações Recebidas</div>
+            <div class="stat-value" id="stat-reports">—</div>
+            <div class="stat-sub">Clica para ver alertas</div>
+            <div class="stat-progress"><div class="stat-progress-fill" id="prog-reports" style="width:0%"></div></div>
+          </div>
+          <!-- Alertas Urgentes -->
+          <div class="stat-card red" onclick="showPage('alerts', document.querySelector('[onclick*=alerts]'))" style="cursor:pointer" title="Ver alertas urgentes">
+            <div class="stat-top"><div class="stat-icon-box">⚡</div><span class="stat-trend trend-down" id="trend-alerts">↓</span></div>
+            <div class="stat-label">Alertas Urgentes</div>
+            <div class="stat-value" id="stat-alerts">—</div>
+            <div class="stat-sub">Clica para ver urgentes</div>
+            <div class="stat-progress"><div class="stat-progress-fill" id="prog-alerts" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div class="stats-chart-row">
+          <div class="chart-card">
+            <div class="chart-title">📈 Casos por Mês</div>
+            <div class="mini-bars" id="monthly-bars"></div>
+            <div style="display:flex;gap:6px;margin-top:6px" id="monthly-labels"></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">📍 Casos por Província</div>
+            <div class="province-list" id="province-list"></div>
+          </div>
+        </div>
+
+        <!-- Casos recentes SEM alertas ao lado -->
+        <div>
+          <div class="section-title">⚠️ Casos Recentes <span style="font-size:12px;color:var(--muted);font-weight:400">— clica para informar</span></div>
+          <div class="dash-mini-list" id="dash-recent-cards"></div>
+        </div>
+      </div>
+
+      <!-- PESSOAS DESAPARECIDAS -->
+      <div class="page" id="page-missing">
+        <div class="search-bar">
+          <input class="search-input" type="text" placeholder="🔍  Pesquisar por nome, local..." oninput="filterMissing(this.value)">
+          <select style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:var(--font-body);font-size:14px;outline:none">
+            <option>Todos</option><option>Criança</option><option>Adulto</option><option>Idoso</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="openModal('publish-modal')">+ Publicar</button>
+        </div>
+        <div class="missing-list" id="all-missing-list"></div>
+      </div>
+
+      <!-- ALERTAS -->
+      <div class="page" id="page-alerts">
+        <div class="alerts-section">
+          <div class="alerts-section-header"><span style="font-size:20px">🚨</span><div class="alerts-section-title">Alertas Urgentes</div><div class="alerts-section-count" id="count-urgent">0</div></div>
+          <div id="alerts-urgent"></div>
+        </div>
+        <div class="alerts-section">
+          <div class="alerts-section-header"><span style="font-size:20px">✅</span><div class="alerts-section-title">Possíveis Correspondências</div><div class="alerts-section-count" id="count-match">0</div></div>
+          <div id="alerts-match"></div>
+        </div>
+        <div class="alerts-section">
+          <div class="alerts-section-header"><span style="font-size:20px">👥</span><div class="alerts-section-title">Informações de Cidadãos</div><div class="alerts-section-count" id="count-citizen">0</div></div>
+          <div id="alerts-citizen"></div>
+        </div>
+        <div class="alerts-section">
+          <div class="alerts-section-header"><span style="font-size:20px">📡</span><div class="alerts-section-title">Actividade do Sistema</div><div class="alerts-section-count" id="count-system">0</div></div>
+          <div id="alerts-system"></div>
+        </div>
+      </div>
+
+      <!-- ESQUADRA VIRTUAL -->
+      <div class="page" id="page-esquadra">
+        <div class="esquadra-panel">
+          <div class="esquadra-header">
+            <div class="esquadra-header-icon">🏛️</div>
+            <div class="esquadra-header-info">
+              <h3>Esquadra Virtual TrackLife</h3>
+              <p>Central de processamento → notificação via Email + SMS + WhatsApp</p>
+            </div>
+          </div>
+          <div class="esquadra-body">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+              <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-size:24px;margin-bottom:6px">📥</div>
+                <div style="font-family:var(--font-head);font-size:20px;font-weight:800" id="eq-received">0</div>
+                <div style="font-size:11px;color:var(--muted)">Recebidas hoje</div>
+              </div>
+              <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-size:24px;margin-bottom:6px">⏳</div>
+                <div style="font-family:var(--font-head);font-size:20px;font-weight:800" id="eq-pending">0</div>
+                <div style="font-size:11px;color:var(--muted)">Em análise</div>
+              </div>
+              <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-size:24px;margin-bottom:6px">✅</div>
+                <div style="font-family:var(--font-head);font-size:20px;font-weight:800" id="eq-sent">0</div>
+                <div style="font-size:11px;color:var(--muted)">Notificados</div>
+              </div>
+            </div>
+            <div class="section-title" style="font-size:14px">📋 Relatórios Recentes</div>
+            <div id="esquadra-reports"></div>
+          </div>
+        </div>
+      </div>
+      <!-- MAPA -->
+<div class="page" id="page-mapa">
+  <div style="border-radius:16px;overflow:hidden;height:500px;border:1px solid var(--border)">
+    <div id="mapa-leaflet" style="height:100%;width:100%"></div>
+  </div>
+</div>
+
+      <!-- CORRESPONDÊNCIAS -->
+       <a class="nav-item" onclick="showPage('mapa',this)">
+          <span class="nav-icon">🗺️</span> Mapa de Casos
+      </a>
+      <div class="page" id="page-matches">
+        <div class="section-title">✅ Correspondências Encontradas</div>
+        <div id="matches-list"></div>
+        <div style="text-align:center;padding:40px;color:var(--muted)" id="no-matches">
+          <div style="font-size:48px;margin-bottom:12px">🔍</div>
+          <p>Nenhuma correspondência ainda.<br>As informações de cidadãos aparecerão aqui.</p>
+        </div>
+      </div>
+
+      <!-- CONFIDENCIAL -->
+      <div class="page" id="page-private">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:16px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:14px">
+          <span style="font-size:28px">🔒</span>
+          <div>
+            <div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--red)">Área Confidencial — Acesso Restrito</div>
+            <div style="font-size:12px;color:var(--muted)">Apenas visível para autoridades verificadas.</div>
+          </div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="openModal('private-publish-modal')" style="margin-bottom:14px">+ Registar Caso Confidencial</button>
+        <div id="private-list"></div>
+        <div id="no-private" style="text-align:center;padding:40px;color:var(--muted)">
+          <div style="font-size:48px;margin-bottom:12px">🔒</div>
+          <p>Nenhum caso confidencial registado ainda.</p>
+        </div>
+      </div>
+
+      <!-- PAINEL AUTORIDADE -->
+      <div class="page" id="page-authority">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:16px;background:rgba(77,163,245,0.06);border:1px solid rgba(77,163,245,0.2);border-radius:14px">
+          <span style="font-size:28px">🛡️</span>
+          <div>
+            <div style="font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--blue)">Painel de Autoridade</div>
+            <div style="font-size:12px;color:var(--muted)">Gestão completa de casos, estatísticas e notificações.</div>
+          </div>
+        </div>
+        <div class="stats-grid" style="margin-bottom:20px">
+          <div class="stat-card red"><div class="stat-top"><div class="stat-icon-box">🔒</div></div><div class="stat-label">Casos Confidenciais</div><div class="stat-value" id="stat-private">0</div></div>
+          <div class="stat-card orange"><div class="stat-top"><div class="stat-icon-box">👥</div></div><div class="stat-label">Casos Públicos</div><div class="stat-value" id="stat-pub-auth">0</div></div>
+          <div class="stat-card blue"><div class="stat-top"><div class="stat-icon-box">📧</div></div><div class="stat-label">Notificações Enviadas</div><div class="stat-value" id="stat-notif">0</div></div>
+          <div class="stat-card green"><div class="stat-top"><div class="stat-icon-box">✅</div></div><div class="stat-label">Pessoas Localizadas</div><div class="stat-value" id="stat-located">0</div></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-danger btn-sm" onclick="openModal('private-publish-modal')">🔒 Novo Caso Confidencial</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('publish-modal')">🌐 Novo Caso Público</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="bnav-item active" onclick="showPageMobile('dashboard',this)"><span class="bnav-icon">📊</span>Dashboard</button>
+      <button class="bnav-item" onclick="showPageMobile('missing',this)"><span class="bnav-icon">👤</span>Casos</button>
+      <button class="bnav-item" onclick="openModal('publish-modal')"><span class="bnav-icon" style="background:var(--accent);border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:18px">+</span>Publicar</button>
+      <button class="bnav-item" onclick="showPageMobile('alerts',this)"><span class="bnav-icon">🔔</span>Alertas<span class="bnav-dot"></span></button>
+      <button class="bnav-item" onclick="showPageMobile('esquadra',this)"><span class="bnav-icon">🏛️</span>Esquadra</button>
+    </div>
+  </nav>
+</div>
+
+<!-- ══════════ MODALS ══════════ -->
+
+<!-- PUBLICAR -->
+<div class="modal-overlay" id="publish-modal">
+  <div class="modal">
+    <div class="modal-head"><h3>📢 Publicar Pessoa Desaparecida</h3><button class="modal-close" onclick="closeModal('publish-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">Clica para seleccionar uma fotografia</div>
+        <img id="upload-preview" alt="preview">
+      </div>
+      <input type="file" id="file-input" accept="image/*" style="display:none" onchange="previewImage(this)">
+
+      <div class="form-grid">
+        <div class="form-group"><label>Nome completo</label><input type="text" id="pub-name" placeholder="Ex: Maria Santos"></div>
+        <div class="form-group"><label>Idade</label><input type="number" id="pub-age" placeholder="Ex: 34" min="0" max="120"></div>
+        <div class="form-group"><label>Última localização</label><input type="text" id="pub-location" placeholder="Ex: Luanda, Ingombota"></div>
+        <div class="form-group"><label>Data desaparecimento</label><input type="date" id="pub-date"></div>
+        <div class="form-group form-full"><label>Descrição física</label><textarea id="pub-desc" placeholder="Altura, peso, características, roupa que vestia..."></textarea></div>
+        <div class="form-group form-full"><label>Contacto para reportar</label><input type="tel" id="pub-contact" placeholder="+244 912 345 678"></div>
+      </div>
+
+      <div class="docs-section">
+        <div class="docs-title">📎 Documentos de Apoio (opcional)</div>
+        <div class="docs-grid">
+          <div class="doc-upload-box" id="doc-bi" onclick="document.getElementById('doc-bi-input').click()"><div class="doc-icon">🪪</div><div class="doc-check">✅</div><div class="doc-label">BI / Cartão Cidadão</div></div>
+          <div class="doc-upload-box" id="doc-cedula" onclick="document.getElementById('doc-cedula-input').click()"><div class="doc-icon">📄</div><div class="doc-check">✅</div><div class="doc-label">Cédula Pessoal</div></div>
+          <div class="doc-upload-box" id="doc-vacina" onclick="document.getElementById('doc-vacina-input').click()"><div class="doc-icon">💉</div><div class="doc-check">✅</div><div class="doc-label">Cartão de Vacinas</div></div>
+        </div>
+        <input type="file" id="doc-bi-input" accept="image/*,application/pdf" style="display:none" onchange="handleDocUpload('doc-bi',this)">
+        <input type="file" id="doc-cedula-input" accept="image/*,application/pdf" style="display:none" onchange="handleDocUpload('doc-cedula',this)">
+        <input type="file" id="doc-vacina-input" accept="image/*,application/pdf" style="display:none" onchange="handleDocUpload('doc-vacina',this)">
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
+      <button class="btn btn-primary" onclick="publishMissing()" style="flex:1;min-width:120px">Publicar agora</button>
+      <button onclick="abrirGerarRosto()" style="width:auto;padding:13px 16px;background:linear-gradient(135deg,#5d3fd3,#1a6fba);color:white;border:none;border-radius:10px;cursor:pointer;font-family:var(--font-head);font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px">
+        🤖 Criar Rosto IA
+      </button>
+      <button class="btn btn-secondary" onclick="closeModal('publish-modal')" style="width:auto;padding:13px 20px">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- INFORMAR -->
+<div class="modal-overlay" id="inform-modal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="inform-modal-title">💬 Informar sobre esta pessoa</h3><button class="modal-close" onclick="closeModal('inform-modal')">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Selecciona o tipo de informação que tens:</p>
+      <div class="inform-options">
+        <button class="inform-option" id="opt-saw" onclick="selectInformOption('saw')"><span class="opt-icon">👁️</span>Vi esta pessoa</button>
+        <button class="inform-option" id="opt-with" onclick="selectInformOption('with')"><span class="opt-icon">🤝</span>Estou com ela</button>
+      </div>
+      <div class="inform-form" id="form-saw">
+        <div class="form-group"><label>Onde a viu?</label><input type="text" id="saw-location" placeholder="Ex: Mercado do Kinaxixi, Luanda"></div>
+        <div class="form-group"><label>Quando a viu?</label><input type="text" id="saw-when" placeholder="Ex: Hoje às 14h30"></div>
+        <div class="form-group"><label>Descrição do que observou</label><textarea id="saw-desc" placeholder="Descreva o que viu — aparência, direcção que seguia..."></textarea></div>
+        <div class="form-group">
+          <label>Foto (se tirou)</label>
+          <div class="upload-zone" style="padding:20px" onclick="document.getElementById('inform-photo-input').click()">
+            <div class="upload-icon" style="font-size:24px;margin-bottom:4px">📷</div>
+            <div class="upload-text" style="font-size:12px">Toca para adicionar foto</div>
+            <img id="inform-photo-preview" alt="" style="display:none;width:100%;max-height:120px;object-fit:contain;border-radius:6px;margin-top:8px">
+          </div>
+          <input type="file" id="inform-photo-input" accept="image/*" style="display:none" onchange="previewInformPhoto(this)">
+        </div>
+        <div class="form-group"><label>O teu contacto (opcional)</label><input type="tel" id="saw-contact" placeholder="+244 9xx xxx xxx"></div>
+      </div>
+      <div class="inform-form" id="form-with">
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--green)">🚨 A esquadra virtual será notificada imediatamente via Email + SMS + WhatsApp.</div>
+        <div class="form-group"><label>Onde estás agora?</label><input type="text" id="with-location" placeholder="Ex: Hospital Américo Boavida, Luanda"></div>
+        <div class="form-group"><label>Estado da pessoa</label><select id="with-state"><option>Bem, mas precisa de ajuda</option><option>Ferida / precisa de assistência médica</option><option>Desorientada / confusa</option><option>Outra situação</option></select></div>
+        <div class="form-group"><label>O teu contacto</label><input type="tel" id="with-contact" placeholder="+244 9xx xxx xxx"></div>
+        <div class="form-group">
+          <label>Foto de confirmação</label>
+          <div class="upload-zone" style="padding:20px" onclick="document.getElementById('inform-photo2-input').click()">
+            <div class="upload-icon" style="font-size:24px;margin-bottom:4px">📷</div>
+            <div class="upload-text" style="font-size:12px">Foto da pessoa encontrada</div>
+            <img id="inform-photo2-preview" alt="" style="display:none;width:100%;max-height:120px;object-fit:contain;border-radius:6px;margin-top:8px">
+          </div>
+          <input type="file" id="inform-photo2-input" accept="image/*" style="display:none" onchange="previewInformPhoto2(this)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="submitInform()" style="flex:1" id="inform-submit-btn" disabled>Enviar Informação</button>
+      <button class="btn btn-secondary" onclick="closeModal('inform-modal')" style="width:auto;padding:13px 20px">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CORRESPONDÊNCIA -->
+<div class="modal-overlay" id="match-modal">
+  <div class="modal">
+    <div class="modal-head"><h3>🚨 Correspondência Detectada!</h3><button class="modal-close" onclick="closeModal('match-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="match-result">
+        <div class="match-avatar">👤</div>
+        <div style="flex:1"><div class="match-name" id="match-name">—</div><div class="match-detail" id="match-detail">—</div><div class="match-detail" id="match-loc">—</div></div>
+        <div class="match-confidence" id="match-conf">—%</div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6">⚡ Notificação enviada via Email + SMS + WhatsApp. Registado às <strong id="match-time">--:--</strong>.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-success" onclick="closeModal('match-modal')" style="flex:1">✅ Confirmar & Notificar</button>
+      <button class="btn btn-secondary" onclick="closeModal('match-modal')" style="width:auto;padding:13px 20px">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIDENCIAL -->
+<div class="modal-overlay" id="private-publish-modal">
+  <div class="modal">
+    <div class="modal-head"><h3>🔒 Registar Caso Confidencial</h3><button class="modal-close" onclick="closeModal('private-publish-modal')">✕</button></div>
+    <div class="modal-body">
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--red)">🔒 Caso <strong>estritamente confidencial</strong>. Não visível ao público.</div>
+      <div class="upload-zone" id="priv-upload-zone" onclick="document.getElementById('priv-file-input').click()">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">Clica para seleccionar fotografia</div>
+        <img id="priv-upload-preview" alt="preview" style="width:100%;max-height:150px;object-fit:contain;border-radius:8px;display:none">
+      </div>
+      <input type="file" id="priv-file-input" accept="image/*" style="display:none" onchange="previewPrivateImage(this)">
+      <div class="form-grid">
+        <div class="form-group"><label>Nome / Identificação</label><input type="text" id="priv-name" placeholder="Nome ou desconhecido"></div>
+        <div class="form-group"><label>Idade aproximada</label><input type="text" id="priv-age" placeholder="Ex: ~30 anos"></div>
+        <div class="form-group"><label>Local encontrado/detido</label><input type="text" id="priv-location" placeholder="Ex: Esquadra 3ª Divisão"></div>
+        <div class="form-group"><label>Data da ocorrência</label><input type="date" id="priv-date"></div>
+        <div class="form-group"><label>Departamento</label><select id="priv-dept"><option value="police">Polícia / Esquadra</option><option value="hospital">Hospital / Urgência</option><option value="forensic">Medicina Legal</option><option value="border">Guarda Fronteira</option><option value="other">Outro</option></select></div>
+        <div class="form-group"><label>Nível de urgência</label><select id="priv-urgency"><option value="normal">Normal</option><option value="urgent">Urgente</option><option value="critical">Crítico</option></select></div>
+        <div class="form-group form-full"><label>Notas internas</label><textarea id="priv-notes" placeholder="Informações internas, estado da pessoa..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="publishPrivate()" style="flex:1">🔒 Registar como Confidencial</button>
+      <button class="btn btn-secondary" onclick="closeModal('private-publish-modal')" style="width:auto;padding:13px 20px">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="script.js"></script>
+</body>
+</html>
