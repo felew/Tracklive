@@ -298,13 +298,6 @@ def listar_documentos():
 
     except Exception as e:
         return jsonify({'status': 'erro', 'message': str(e)}), 500
-
 if __name__ == '__main__':
-    print("--- INICIANDO TRACKLIFE ---")
-    try:
-        database.init_db()
-    except Exception as db_err:
-        print(f"Erro no Banco: {db_err}")
-
-port = int(os.environ.get('PORT', 8080))
-app.run(debug=False, host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT', 5001))
+    app.run(debug=False, host='0.0.0.0', port=port)
