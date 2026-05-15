@@ -303,6 +303,20 @@ def listar_documentos():
 def instituicao():
     return send_from_directory(BASE_DIR, 'instituicao.html')
 
+@app.route('/api/cidadaos', methods=['GET'])
+def listar_cidadaos():
+    try:
+        conn = database.get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, nome, email, tipo, provincia, municipio, latitude, longitude, criado_em FROM cidadaos ORDER BY criado_em DESC")
+        data = cursor.fetchall()
+        cursor.close(); conn.close()
+        for d in data:
+            if d.get('criado_em'): d['criado_em'] = str(d['criado_em'])
+        return jsonify({'status': 'success', 'cidadaos': data})
+    except Exception as e:
+        return jsonify({'status': 'erro', 'message': str(e)}), 500
+        
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=False, host='0.0.0.0', port=port)
