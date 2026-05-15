@@ -298,6 +298,11 @@ def listar_documentos():
 
     except Exception as e:
         return jsonify({'status': 'erro', 'message': str(e)}), 500
+
+@app.route('/instituicao')
+def instituicao():
+    return send_from_directory(BASE_DIR, 'instituicao.html')
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=False, host='0.0.0.0', port=port)
